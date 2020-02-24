@@ -7,7 +7,8 @@ import pytest
 from freqtrade.commands import (start_create_userdir, start_download_data,
                                 start_hyperopt_list, start_hyperopt_show,
                                 start_list_exchanges, start_list_markets,
-                                start_list_strategies, start_list_timeframes,
+                                start_list_hyperopts, start_list_strategies,
+                                start_list_timeframes,
                                 start_new_hyperopt, start_new_strategy,
                                 start_test_pairlist, start_trading)
 from freqtrade.configuration import setup_utils_configuration
@@ -665,6 +666,39 @@ def test_start_list_strategies(mocker, caplog, capsys):
     assert "DefaultStrategy" in captured.out
 
 
+def test_start_list_hyperopts(mocker, caplog, capsys):
+
+    args = [
+        "list-hyperopts",
+        "--hyperopt-path",
+        str(Path(__file__).parent.parent / "optimize"),
+        "-1"
+    ]
+    pargs = get_args(args)
+    # pargs['config'] = None
+    start_list_hyperopts(pargs)
+    captured = capsys.readouterr()
+    assert "TestHyperoptLegacy" not in captured.out
+    assert "legacy_hyperopt.py" not in captured.out
+    assert "DefaultHyperOpt" in captured.out
+    assert "test_hyperopt.py" not in captured.out
+
+    # Test regular output
+    args = [
+        "list-hyperopts",
+        "--hyperopt-path",
+        str(Path(__file__).parent.parent / "optimize"),
+    ]
+    pargs = get_args(args)
+    # pargs['config'] = None
+    start_list_hyperopts(pargs)
+    captured = capsys.readouterr()
+    assert "TestHyperoptLegacy" not in captured.out
+    assert "legacy_hyperopt.py" not in captured.out
+    assert "DefaultHyperOpt" in captured.out
+    assert "test_hyperopt.py" in captured.out
+
+
 def test_start_test_pairlist(mocker, caplog, tickers, default_conf, capsys):
     patch_exchange(mocker, mock_markets=True)
     mocker.patch.multiple('freqtrade.exchange.Exchange',
@@ -744,6 +778,121 @@ def test_hyperopt_list(mocker, capsys, hyperopt_results):
     assert all(x not in captured.out
                for x in [" 1/12", " 3/12", " 4/12", " 5/12", " 6/12", " 7/12", " 8/12", " 9/12",
                          " 11/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--no-details",
+        "--no-color",
+        "--min-trades", "20"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 3/12", " 6/12", " 7/12", " 9/12", " 11/12"])
+    assert all(x not in captured.out
+               for x in [" 1/12", " 2/12", " 4/12", " 5/12", " 8/12", " 10/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--profitable",
+        "--no-details",
+        "--max-trades", "20"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 2/12", " 10/12"])
+    assert all(x not in captured.out
+               for x in [" 1/12", " 3/12", " 4/12", " 5/12", " 6/12", " 7/12", " 8/12", " 9/12",
+                         " 11/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--profitable",
+        "--no-details",
+        "--min-avg-profit", "0.11"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 2/12"])
+    assert all(x not in captured.out
+               for x in [" 1/12", " 3/12", " 4/12", " 5/12", " 6/12", " 7/12", " 8/12", " 9/12",
+                         " 10/12", " 11/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--no-details",
+        "--max-avg-profit", "0.10"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 1/12", " 3/12", " 5/12", " 6/12", " 7/12", " 8/12", " 9/12",
+                         " 11/12"])
+    assert all(x not in captured.out
+               for x in [" 2/12", " 4/12", " 10/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--no-details",
+        "--min-total-profit", "0.4"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 10/12"])
+    assert all(x not in captured.out
+               for x in [" 1/12", " 2/12", " 3/12", " 4/12", " 5/12", " 6/12", " 7/12", " 8/12",
+                         " 9/12", " 11/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--no-details",
+        "--max-total-profit", "0.4"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 1/12", " 2/12", " 3/12", " 5/12", " 6/12", " 7/12", " 8/12",
+                         " 9/12", " 11/12"])
+    assert all(x not in captured.out
+               for x in [" 4/12", " 10/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--profitable",
+        "--no-details",
+        "--min-avg-time", "2000"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 10/12"])
+    assert all(x not in captured.out
+               for x in [" 1/12", " 2/12", " 3/12", " 4/12", " 5/12", " 6/12", " 7/12",
+                         " 8/12", " 9/12", " 11/12", " 12/12"])
+    args = [
+        "hyperopt-list",
+        "--no-details",
+        "--max-avg-time", "1500"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_hyperopt_list(pargs)
+    captured = capsys.readouterr()
+    assert all(x in captured.out
+               for x in [" 2/12", " 6/12"])
+    assert all(x not in captured.out
+               for x in [" 1/12", " 3/12", " 4/12", " 5/12", " 7/12", " 8/12"
+                         " 9/12", " 10/12", " 11/12", " 12/12"])
 
 
 def test_hyperopt_show(mocker, capsys, hyperopt_results):

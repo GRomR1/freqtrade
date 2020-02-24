@@ -29,11 +29,12 @@ logger = logging.getLogger("ft_rest_client")
 
 class FtRestClient():
 
-    def __init__(self, serverurl, username=None, password=None):
+    def __init__(self, serverurl, username=None, password=None, pretty_print=False):
 
         self._serverurl = serverurl
         self._session = requests.Session()
         self._session.auth = (username, password)
+        self._pretty = pretty_print
 
     def _call(self, method, apipath, params: dict = None, data=None, files=None):
 
@@ -54,8 +55,13 @@ class FtRestClient():
 
         try:
             resp = self._session.request(method, url, headers=hd, data=json.dumps(data))
+            if resp.status_code != 200:
+                raise ConnectionError
             # return resp.text
-            return resp.json()
+            if self._pretty:
+                return json.dumps(resp.json(), indent=2)
+            else:
+                return resp.json()
         except ConnectionError:
             logger.warning("Connection error")
 
@@ -261,9 +267,10 @@ def main(args):
     port = config.get("api_server", {}).get("listen_port", "8080")
     username = config.get("api_server", {}).get("username")
     password = config.get("api_server", {}).get("password")
+    pretty_print = config.get("api_server", {}).get("pretty_print")
 
     server_url = f"http://{url}:{port}"
-    client = FtRestClient(server_url, username, password)
+    client = FtRestClient(server_url, username, password, pretty_print)
 
     m = [x for x, y in inspect.getmembers(client) if not x.startswith('_')]
     command = args["command"]
